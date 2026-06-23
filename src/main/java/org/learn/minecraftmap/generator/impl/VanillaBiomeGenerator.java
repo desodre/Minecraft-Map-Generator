@@ -5,6 +5,8 @@ import org.learn.minecraftmap.domain.BiomeColorMap;
 import org.learn.minecraftmap.domain.BiomeInfo;
 import org.learn.minecraftmap.generator.BiomeGenerator;
 import org.learn.minecraftmap.jna.CubiomesLibrary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
@@ -14,17 +16,29 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 public class VanillaBiomeGenerator implements BiomeGenerator {
 
+    private static final Logger logger = LoggerFactory.getLogger(VanillaBiomeGenerator.class);
+
     // Cache of Generator pointers per VersionedSeed
     private final ConcurrentMap<VersionedSeed, Pointer> generatorCache = new ConcurrentHashMap<>();
 
     private Pointer getGenerator(long seed, String mcVersion) {
-        return generatorCache.computeIfAbsent(new VersionedSeed(seed, mcVersion), key -> {
-            // Allocate 27592 bytes for the C Generator struct
-            Pointer g = new com.sun.jna.Memory(27592);
-            int versionCode = mapVersion(key.version());
-            CubiomesLibrary.INSTANCE.setupGenerator(g, versionCode, 0);
-            CubiomesLibrary.INSTANCE.applySeed(g, CubiomesLibrary.DIM_OVERWORLD, key.seed());
+        VersionedSeed key = new VersionedSeed(seed, mcVersion);
+        Pointer g = generatorCache.get(key);
+        if (g != null) {
+            logger.debug("Cache hit for Cubiomes generator: seed={}, version={}", seed, mcVersion);
             return g;
+        }
+
+        logger.info("Cache miss. Initializing new native Cubiomes generator for seed={}, version={}", seed, mcVersion);
+        return generatorCache.computeIfAbsent(key, k -> {
+            long start = System.currentTimeMillis();
+            // Allocate 27592 bytes for the C Generator struct
+            Pointer newG = new com.sun.jna.Memory(27592);
+            int versionCode = mapVersion(k.version());
+            CubiomesLibrary.INSTANCE.setupGenerator(newG, versionCode, 0);
+            CubiomesLibrary.INSTANCE.applySeed(newG, CubiomesLibrary.DIM_OVERWORLD, k.seed());
+            logger.info("Initialized native generator in {} ms for seed={}", System.currentTimeMillis() - start, k.seed());
+            return newG;
         });
     }
 
@@ -41,6 +55,7 @@ public class VanillaBiomeGenerator implements BiomeGenerator {
 
     @Override
     public BiomeInfo getBiome(long seed, String mcVersion, int x, int z) {
+        logger.debug("Sampling single biome: seed={}, version={}, x={}, z={}", seed, mcVersion, x, z);
         Pointer g = getGenerator(seed, mcVersion);
         // Cubiomes: getBiomeAt(g, scale, x, y, z)
         // scale = 1 for 1:1 block coordinates (this automatically handles the 1:4 Voronoi zoom resolution internally)
@@ -48,11 +63,15 @@ public class VanillaBiomeGenerator implements BiomeGenerator {
         
         String name = BiomeColorMap.getBiomeName(biomeId);
         String color = BiomeColorMap.getHexColor(biomeId);
+        logger.debug("Sampled biome at ({}, {}): id={}, name={}", x, z, biomeId, name);
         return new BiomeInfo(biomeId, name, color);
     }
 
     @Override
     public BiomeInfo[][] getBiomeTile(long seed, String mcVersion, int zoom, int tx, int ty, int tileSize) {
+        long start = System.currentTimeMillis();
+        logger.info("Generating biome tile grid: seed={}, version={}, zoom={}, tx={}, ty={}", seed, mcVersion, zoom, tx, ty);
+        
         BiomeInfo[][] tile = new BiomeInfo[tileSize][tileSize];
         Pointer g = getGenerator(seed, mcVersion);
         
@@ -74,6 +93,7 @@ public class VanillaBiomeGenerator implements BiomeGenerator {
             }
         }
         
+        logger.info("Generated biome tile grid in {} ms", System.currentTimeMillis() - start);
         return tile;
     }
 

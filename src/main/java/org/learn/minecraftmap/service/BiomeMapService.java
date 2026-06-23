@@ -3,6 +3,8 @@ package org.learn.minecraftmap.service;
 import org.learn.minecraftmap.domain.BiomeColorMap;
 import org.learn.minecraftmap.domain.BiomeInfo;
 import org.learn.minecraftmap.generator.BiomeGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -13,6 +15,8 @@ import java.io.IOException;
 
 @Service
 public class BiomeMapService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BiomeMapService.class);
 
     private final BiomeGenerator biomeGenerator;
 
@@ -45,9 +49,13 @@ public class BiomeMapService {
      * @throws IOException if image rendering fails
      */
     public byte[] generateTileImage(long seed, String mcVersion, int zoom, int tx, int ty) throws IOException {
+        long start = System.currentTimeMillis();
+        logger.info("Starting PNG tile rendering for seed={}, version={}, zoom={}, tx={}, ty={}", seed, mcVersion, zoom, tx, ty);
+
         int tileSize = 256;
         BiomeInfo[][] biomeGrid = biomeGenerator.getBiomeTile(seed, mcVersion, zoom, tx, ty, tileSize);
 
+        long gridTime = System.currentTimeMillis();
         BufferedImage image = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_RGB);
 
         for (int z = 0; z < tileSize; z++) {
@@ -60,6 +68,14 @@ public class BiomeMapService {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(image, "png", baos);
-        return baos.toByteArray();
+        byte[] imageBytes = baos.toByteArray();
+
+        logger.info("PNG tile rendered: size={} bytes, total time={} ms (grid gen={} ms, draw & encode={} ms)",
+                imageBytes.length,
+                System.currentTimeMillis() - start,
+                gridTime - start,
+                System.currentTimeMillis() - gridTime);
+
+        return imageBytes;
     }
 }
