@@ -1,8 +1,12 @@
 package org.learn.minecraftmap;
 
+import com.sun.jna.Pointer;
+import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.junit.jupiter.api.Test;
 import org.learn.minecraftmap.domain.BiomeInfo;
 import org.learn.minecraftmap.generator.impl.VanillaBiomeGenerator;
+import org.learn.minecraftmap.generator.pool.CubiomesGeneratorFactory;
 import org.learn.minecraftmap.service.BiomeMapService;
 
 import java.io.IOException;
@@ -11,8 +15,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class BiomeMapServiceTest {
 
-    private final VanillaBiomeGenerator generator = new VanillaBiomeGenerator();
-    private final BiomeMapService service = new BiomeMapService(generator);
+    private static final GenericObjectPool<Pointer> pool = createTestPool();
+    private final VanillaBiomeGenerator generator = new VanillaBiomeGenerator(pool);
+    private final BiomeMapService service = new BiomeMapService(generator, pool);
+
+    private static GenericObjectPool<Pointer> createTestPool() {
+        CubiomesGeneratorFactory factory = new CubiomesGeneratorFactory();
+        GenericObjectPoolConfig<Pointer> config = new GenericObjectPoolConfig<>();
+        config.setMaxTotal(2);
+        return new GenericObjectPool<>(factory, config);
+    }
 
     @Test
     public void testGetBiome() {
@@ -46,12 +58,11 @@ public class BiomeMapServiceTest {
     @Test
     public void testGenerateTileImage() throws IOException {
         long seed = 987654321L;
-        int zoom = 8;
         int tx = 0;
         int ty = 0;
 
         // Verify tile image works for version 26.2 (dimension 0 = Overworld)
-        byte[] pngBytes = service.generateTileImage(seed, "26.2", 0, zoom, tx, ty);
+        byte[] pngBytes = service.generateTileImage(seed, "26.2", 0, tx, ty);
         assertNotNull(pngBytes);
         assertTrue(pngBytes.length > 0);
 
@@ -63,18 +74,18 @@ public class BiomeMapServiceTest {
     }
 
     @Test
-    public void testZoomScalingMath() {
-        // Test that zooming in/out scales coordinates correctly
+    public void testNative1to1ScalingMath() {
+        // Test that 1:1 scale is used (1 pixel = 1 block).
         long seed = 11111L;
         
-        // Zoom 8 is 1:1 scale. So tile tx 0, ty 0, pixel px 0, pz 0 is block x 0, z 0
-        BiomeInfo[][] gridZoom8 = generator.getBiomeTile(seed, "1.20", 0, 8, 0, 0, 256);
-        BiomeInfo singleZoom8 = generator.getBiome(seed, "1.20", 0, 0, 0);
-        assertEquals(singleZoom8.getId(), gridZoom8[0][0].getId());
+        // Tile tx 0, ty 0. Pixel px 0, pz 0 is block x 0, z 0.
+        // Pixel px 10, pz 20 is block x 10, z 20.
+        BiomeInfo[][] grid = generator.getBiomeTile(seed, "1.20", 0, 0, 0, 256);
+        
+        BiomeInfo singleAt0_0 = generator.getBiome(seed, "1.20", 0, 0, 0);
+        assertEquals(singleAt0_0.getId(), grid[0][0].getId());
 
-        // Zoom 7 is 1:2 scale. So pixel px 1, pz 1 in tile tx 0, ty 0 is block x 2, z 2
-        BiomeInfo[][] gridZoom7 = generator.getBiomeTile(seed, "1.20", 0, 7, 0, 0, 256);
-        BiomeInfo singleZoom7_pixel1 = generator.getBiome(seed, "1.20", 0, 2, 2);
-        assertEquals(singleZoom7_pixel1.getId(), gridZoom7[1][1].getId());
+        BiomeInfo singleAt10_20 = generator.getBiome(seed, "1.20", 0, 10, 20);
+        assertEquals(singleAt10_20.getId(), grid[20][10].getId()); // pz is row index (y/z), px is col index (x)
     }
 }

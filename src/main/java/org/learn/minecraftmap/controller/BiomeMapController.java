@@ -92,8 +92,8 @@ public class BiomeMapController {
         @Parameter(description = "The Minecraft dimension ID (0 for Overworld, -1 for Nether, 1 for End).", required = false, example = "0")
         @RequestParam(required = false, defaultValue = "0") int dimension,
         
-        @Parameter(description = "The map zoom level. At zoom 8, each pixel matches 1 block.", required = true, example = "8")
-        @RequestParam int zoom,
+        @Parameter(description = "The map zoom level (deprecated, ignored).", required = false)
+        @RequestParam(required = false) Integer zoom,
         
         @Parameter(description = "The horizontal tile coordinate.", required = true, example = "0")
         @RequestParam int tx,
@@ -102,7 +102,7 @@ public class BiomeMapController {
         @RequestParam int ty
     ) {
         try {
-            byte[] imageBytes = biomeMapService.generateTileImage(seed, version, dimension, zoom, tx, ty);
+            byte[] imageBytes = biomeMapService.generateTileImage(seed, version, dimension, tx, ty);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.IMAGE_PNG);
             // Disable caching to ensure browser fetches fresh Cubiomes tiles during testing
