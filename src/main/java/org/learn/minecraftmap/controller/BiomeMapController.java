@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +22,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/v1")
+@CrossOrigin(origins = "*")
 @Tag(name = "Minecraft Map Generator", description = "Endpoints for sampling biomes and generating map tiles from world seeds.")
 public class BiomeMapController {
 
@@ -49,6 +51,9 @@ public class BiomeMapController {
 
         @Parameter(description = "The Minecraft version to generate (e.g. 1.20, 1.20.2, 1.20.6, 1.21, 26.1, 26.2). Defaults to 1.20.", required = false, example = "26.2")
         @RequestParam(required = false, defaultValue = "1.20") String version,
+
+        @Parameter(description = "The Minecraft dimension ID (0 for Overworld, -1 for Nether, 1 for End).", required = false, example = "0")
+        @RequestParam(required = false, defaultValue = "0") int dimension,
         
         @Parameter(description = "The block coordinate X.", required = true, example = "100")
         @RequestParam int x,
@@ -56,7 +61,7 @@ public class BiomeMapController {
         @Parameter(description = "The block coordinate Z.", required = true, example = "100")
         @RequestParam int z
     ) {
-        BiomeInfo biomeInfo = biomeMapService.getBiome(seed, version, x, z);
+        BiomeInfo biomeInfo = biomeMapService.getBiome(seed, version, dimension, x, z);
         return ResponseEntity.ok(biomeInfo);
     }
 
@@ -83,6 +88,9 @@ public class BiomeMapController {
 
         @Parameter(description = "The Minecraft version to generate (e.g. 1.20, 1.20.2, 1.20.6, 1.21, 26.1, 26.2). Defaults to 1.20.", required = false, example = "26.2")
         @RequestParam(required = false, defaultValue = "1.20") String version,
+
+        @Parameter(description = "The Minecraft dimension ID (0 for Overworld, -1 for Nether, 1 for End).", required = false, example = "0")
+        @RequestParam(required = false, defaultValue = "0") int dimension,
         
         @Parameter(description = "The map zoom level. At zoom 8, each pixel matches 1 block.", required = true, example = "8")
         @RequestParam int zoom,
@@ -94,7 +102,7 @@ public class BiomeMapController {
         @RequestParam int ty
     ) {
         try {
-            byte[] imageBytes = biomeMapService.generateTileImage(seed, version, zoom, tx, ty);
+            byte[] imageBytes = biomeMapService.generateTileImage(seed, version, dimension, zoom, tx, ty);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.IMAGE_PNG);
             // Disable caching to ensure browser fetches fresh Cubiomes tiles during testing
