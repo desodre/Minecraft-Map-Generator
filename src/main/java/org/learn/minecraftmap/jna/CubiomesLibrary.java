@@ -37,5 +37,7 @@ public interface CubiomesLibrary extends Library {
     int MC_NEWEST = 28;
 
     // Dimension Constants from biomes.h (enum Dimension)
+    int DIM_NETHER = -1;
     int DIM_OVERWORLD = 0;
+    int DIM_END = 1;
 }

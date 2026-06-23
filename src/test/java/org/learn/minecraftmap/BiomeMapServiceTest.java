@@ -17,8 +17,8 @@ public class BiomeMapServiceTest {
     @Test
     public void testGetBiome() {
         long seed = 123456L;
-        // Sample biome at a specific coordinate for 1.20
-        BiomeInfo biome = service.getBiome(seed, "1.20", 0, 0);
+        // Sample biome at a specific coordinate for 1.20 (dimension 0 = Overworld)
+        BiomeInfo biome = service.getBiome(seed, "1.20", 0, 0, 0);
         assertNotNull(biome);
         assertNotNull(biome.getName());
         assertNotEquals("unknown", biome.getName());
@@ -32,8 +32,8 @@ public class BiomeMapServiceTest {
     @Test
     public void testGetBiomeForNewVersion26_2() {
         long seed = 123456L;
-        // Sample biome at a specific coordinate for 26.2 (mapped to 1.21)
-        BiomeInfo biome = service.getBiome(seed, "26.2", 0, 0);
+        // Sample biome at a specific coordinate for 26.2 (mapped to 1.21, dimension 0 = Overworld)
+        BiomeInfo biome = service.getBiome(seed, "26.2", 0, 0, 0);
         assertNotNull(biome);
         assertNotNull(biome.getName());
         assertNotEquals("unknown", biome.getName());
@@ -50,8 +50,8 @@ public class BiomeMapServiceTest {
         int tx = 0;
         int ty = 0;
 
-        // Verify tile image works for version 26.2
-        byte[] pngBytes = service.generateTileImage(seed, "26.2", zoom, tx, ty);
+        // Verify tile image works for version 26.2 (dimension 0 = Overworld)
+        byte[] pngBytes = service.generateTileImage(seed, "26.2", 0, zoom, tx, ty);
         assertNotNull(pngBytes);
         assertTrue(pngBytes.length > 0);
 
@@ -68,13 +68,13 @@ public class BiomeMapServiceTest {
         long seed = 11111L;
         
         // Zoom 8 is 1:1 scale. So tile tx 0, ty 0, pixel px 0, pz 0 is block x 0, z 0
-        BiomeInfo[][] gridZoom8 = generator.getBiomeTile(seed, "1.20", 8, 0, 0, 256);
-        BiomeInfo singleZoom8 = generator.getBiome(seed, "1.20", 0, 0);
+        BiomeInfo[][] gridZoom8 = generator.getBiomeTile(seed, "1.20", 0, 8, 0, 0, 256);
+        BiomeInfo singleZoom8 = generator.getBiome(seed, "1.20", 0, 0, 0);
         assertEquals(singleZoom8.getId(), gridZoom8[0][0].getId());
 
         // Zoom 7 is 1:2 scale. So pixel px 1, pz 1 in tile tx 0, ty 0 is block x 2, z 2
-        BiomeInfo[][] gridZoom7 = generator.getBiomeTile(seed, "1.20", 7, 0, 0, 256);
-        BiomeInfo singleZoom7_pixel1 = generator.getBiome(seed, "1.20", 2, 2);
+        BiomeInfo[][] gridZoom7 = generator.getBiomeTile(seed, "1.20", 0, 7, 0, 0, 256);
+        BiomeInfo singleZoom7_pixel1 = generator.getBiome(seed, "1.20", 0, 2, 2);
         assertEquals(singleZoom7_pixel1.getId(), gridZoom7[1][1].getId());
     }
 }

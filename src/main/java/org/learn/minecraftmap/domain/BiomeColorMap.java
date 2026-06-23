@@ -114,6 +114,10 @@ public class BiomeColorMap {
 
         // End
         register(9, "the_end", new Color(56, 56, 24));
+        register(40, "small_end_islands", new Color(74, 74, 37));
+        register(41, "end_midlands", new Color(90, 90, 48));
+        register(42, "end_highlands", new Color(108, 108, 56));
+        register(43, "end_barrens", new Color(60, 60, 27));
     }
 
     private static void register(int id, String name, Color color) {
