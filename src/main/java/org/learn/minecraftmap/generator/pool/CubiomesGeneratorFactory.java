@@ -15,7 +15,6 @@ import org.slf4j.LoggerFactory;
 public class CubiomesGeneratorFactory extends BasePooledObjectFactory<Pointer> {
 
     private static final Logger logger = LoggerFactory.getLogger(CubiomesGeneratorFactory.class);
-    private static final int GENERATOR_STRUCT_SIZE = 27592;
 
     /**
      * Subclass of JNA Memory to expose the protected dispose() method as public.
@@ -33,9 +32,11 @@ public class CubiomesGeneratorFactory extends BasePooledObjectFactory<Pointer> {
 
     @Override
     public Pointer create() {
-        logger.debug("Allocating new native Cubiomes Generator memory block of size {}", GENERATOR_STRUCT_SIZE);
-        return new PooledMemory(GENERATOR_STRUCT_SIZE);
+        int structSize = org.learn.minecraftmap.jna.CubiomesNative.getGeneratorSize();
+        logger.debug("Allocating new native Cubiomes Generator memory block of size {}", structSize);
+        return new PooledMemory(structSize);
     }
+
 
     @Override
     public PooledObject<Pointer> wrap(Pointer pointer) {
