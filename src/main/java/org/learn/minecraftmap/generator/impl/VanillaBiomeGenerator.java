@@ -8,7 +8,9 @@ import org.learn.minecraftmap.generator.BiomeGenerator;
 import org.learn.minecraftmap.jna.CubiomesNative;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.learn.minecraftmap.generator.CustomDatapackManager;
 import org.springframework.stereotype.Component;
+
 
 @Component
 public class VanillaBiomeGenerator implements BiomeGenerator {
@@ -16,9 +18,11 @@ public class VanillaBiomeGenerator implements BiomeGenerator {
     private static final Logger logger = LoggerFactory.getLogger(VanillaBiomeGenerator.class);
 
     private final GenericObjectPool<Pointer> generatorPool;
+    private final CustomDatapackManager datapackManager;
 
-    public VanillaBiomeGenerator(GenericObjectPool<Pointer> generatorPool) {
+    public VanillaBiomeGenerator(GenericObjectPool<Pointer> generatorPool, CustomDatapackManager datapackManager) {
         this.generatorPool = generatorPool;
+        this.datapackManager = datapackManager;
     }
 
     private int mapVersion(String versionStr) {
@@ -40,6 +44,9 @@ public class VanillaBiomeGenerator implements BiomeGenerator {
         try {
             g = generatorPool.borrowObject();
             CubiomesNative.setupGenerator(g, versionCode, 0);
+            if (datapackManager.getCustomTree() != null) {
+                CubiomesNative.setGeneratorCustomTree(g, datapackManager.getCustomTree());
+            }
             CubiomesNative.applySeed(g, dimension, seed);
             
             // Cubiomes: getBiomeAt(g, scale, x, y, z)
@@ -71,6 +78,9 @@ public class VanillaBiomeGenerator implements BiomeGenerator {
             try {
                 g = generatorPool.borrowObject();
                 CubiomesNative.setupGenerator(g, versionCode, 0);
+                if (datapackManager.getCustomTree() != null) {
+                    CubiomesNative.setGeneratorCustomTree(g, datapackManager.getCustomTree());
+                }
                 CubiomesNative.applySeed(g, dimension, seed);
 
                 int blockZ = ty * tileSize + pz;

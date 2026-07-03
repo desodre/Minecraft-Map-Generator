@@ -14,7 +14,9 @@ Este microsserviço utiliza **JNA (Java Native Access)** para se conectar direta
 * **Tiles de Mapa em Tempo Real**: Endpoint que gera e serve imagens de tiles PNG de 256x256 pixels com redimensionamento dinâmico baseado no fator de zoom.
 * **Cache de Alta Performance**: Cache em memória com chave composta `(Seed, Version)` que armazena os endereços de memória dos geradores nativos estruturados em C. Isso evita reprocessamentos matemáticos da biblioteca nativa e renderiza os tiles em milissegundos.
 * **Arquitetura Modular**: Toda a lógica de consulta foi encapsulada sob a interface `BiomeGenerator`, permitindo fácil substituição por instâncias headless de servidores modificados (ex: Fabric/Forge) no futuro.
+* **Suporte a Mods via Datapacks**: Carrega arquivos de configuração JSON de datapacks de mundos (como do *Biomes O' Plenty*) para gerar mapas com suporte completo a novos biomas. A correspondência climatológica utiliza uma Kd-Tree 6D nativa de altíssima performance.
 * **Documentação OpenAPI 3.0 / Swagger**: Documentação completa e interativa dos endpoints expostos pelo microsserviço.
+
 
 ---
 
@@ -111,6 +113,27 @@ Gera uma imagem PNG de 256x256 pixels representando o tile de biomas do mapa.
 * **Resposta de Sucesso**: `200 OK`
   * **Headers**: `Content-Type: image/png`, `Cache-Control: no-cache, no-store, must-revalidate`
   * **Corpo**: Dados binários da imagem PNG.
+
+---
+
+## 🌲 Suporte a Mods (Datapacks & Kd-Tree)
+
+O microsserviço agora possui integração completa para suportar mods que alteram ou adicionam novos biomas à geração do Overworld (como **Biomes O' Plenty**).
+
+### Como Funciona:
+1. **Leitura de Datapacks**: O microsserviço lê o arquivo de configuração JSON correspondente ao gerador do mundo multi-noise (ex: `overworld.json` do datapack).
+2. **Árvore Kd-Tree 6D**: Para realizar a busca do bioma mais próximo no espaço climatológico sem comprometer a performance, o backend constrói uma árvore de partição espacial **Kd-Tree de 6 dimensões** (temperatura, umidade, continentalidade, erosão, profundidade e estranheza).
+3. **Registro Dinâmico**: Biomas não-vanilla são registrados dinamicamente pelo C com IDs começando a partir de `200`. Nomes amigáveis e cores determinísticas (calculadas via hash sobre o nome do bioma) são resolvidos em tempo de execução.
+
+### Configuração no Spring Boot:
+Você pode configurar o caminho para o datapack JSON no arquivo `src/main/resources/application.yml` ou através de variáveis de ambiente:
+
+```yaml
+cubiomes:
+  datapack-path: "/caminho/para/o/seu/overworld.json"
+```
+
+O ciclo de vida da memória nativa da árvore Kd-Tree é gerenciado de forma segura pelo `CustomDatapackManager` durante a inicialização e encerramento do Spring Boot.
 
 ---
 

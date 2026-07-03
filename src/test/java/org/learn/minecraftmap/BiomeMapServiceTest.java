@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.learn.minecraftmap.domain.BiomeInfo;
 import org.learn.minecraftmap.generator.impl.VanillaBiomeGenerator;
 import org.learn.minecraftmap.generator.pool.CubiomesGeneratorFactory;
+import org.learn.minecraftmap.generator.CustomDatapackManager;
 import org.learn.minecraftmap.service.BiomeMapService;
 
 import java.io.IOException;
@@ -16,8 +17,15 @@ import static org.junit.jupiter.api.Assertions.*;
 public class BiomeMapServiceTest {
 
     private static final GenericObjectPool<Pointer> pool = createTestPool();
-    private final VanillaBiomeGenerator generator = new VanillaBiomeGenerator(pool);
+    private static final CustomDatapackManager vanillaDatapackManager = createVanillaDatapackManager();
+    private final VanillaBiomeGenerator generator = new VanillaBiomeGenerator(pool, vanillaDatapackManager);
     private final BiomeMapService service = new BiomeMapService(generator, pool);
+
+    private static CustomDatapackManager createVanillaDatapackManager() {
+        CustomDatapackManager manager = new CustomDatapackManager();
+        manager.init();
+        return manager;
+    }
 
     private static GenericObjectPool<Pointer> createTestPool() {
         CubiomesGeneratorFactory factory = new CubiomesGeneratorFactory();
@@ -87,5 +95,43 @@ public class BiomeMapServiceTest {
 
         BiomeInfo singleAt10_20 = generator.getBiome(seed, "1.20", 0, 10, 20);
         assertEquals(singleAt10_20.getId(), grid[20][10].getId()); // pz is row index (y/z), px is col index (x)
+    }
+
+    @Test
+    public void testGetCustomBiomeFromDatapack() {
+        CustomDatapackManager datapackManager = new CustomDatapackManager();
+        datapackManager.setDatapackPath("/home/desodre/Projects/cubiomes/test_overworld.json");
+        datapackManager.init();
+
+        try {
+            assertNotNull(datapackManager.getCustomTree(), "Custom tree should be loaded");
+
+            // Create a generator specifically configured with this custom tree
+            VanillaBiomeGenerator customGenerator = new VanillaBiomeGenerator(pool, datapackManager);
+            
+            // Validate JNA function getCustomBiomeIdByName directly
+            int customId = org.learn.minecraftmap.jna.CubiomesNative.getCustomBiomeIdByName("biomesoplenty:lavender_fields");
+            assertTrue(customId >= 200, "Should have registered lavender fields dynamically with ID >= 200");
+
+            // Validate BiomeColorMap integration
+            String customName = org.learn.minecraftmap.domain.BiomeColorMap.getBiomeName(customId);
+            assertEquals("biomesoplenty:lavender_fields", customName);
+
+            String customColor = org.learn.minecraftmap.domain.BiomeColorMap.getHexColor(customId);
+            assertNotNull(customColor);
+            assertNotEquals("#8db360", customColor, "Should have generated a custom color hash instead of default plains green");
+
+            System.out.println("Custom Biome Registered: ID=" + customId + ", Name=" + customName + ", Color=" + customColor);
+
+            // Test sampling with seed that generates this custom biome via Kd-Tree
+            // In test_overworld.json:
+            // biomesoplenty:lavender_fields -> temp=[0.3, 0.7], hum=[0.5, 0.9], cont=0.0
+            // When custom tree is active, sampling should successfully output customIds or vanilla IDs matching nearest neighbors
+            BiomeInfo sampled = customGenerator.getBiome(12345L, "1.20", 0, 0, 0);
+            assertNotNull(sampled);
+            System.out.println("Sampled biome with custom datapack active at (0,0): " + sampled.getName() + " (ID: " + sampled.getId() + ")");
+        } finally {
+            datapackManager.cleanup();
+        }
     }
 }

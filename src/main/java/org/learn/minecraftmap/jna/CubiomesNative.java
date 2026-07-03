@@ -97,7 +97,17 @@ public class CubiomesNative {
      */
     public static native int nextStronghold(StrongholdIter si, Pointer g);
 
+    // Dynamic custom biome and datapack helper methods
+    public static native int getGeneratorSize();
+    public static native Pointer loadCustomTreeFromDatapack(String jsonPath);
+    public static native void freeCustomTree(Pointer customTree);
+    public static native void setGeneratorCustomTree(Pointer g, Pointer customTree);
+    public static native String getCustomBiomeName(int id);
+    public static native int getCustomBiomeColor(int id);
+    public static native int getCustomBiomeIdByName(String name);
+
     // Minecraft Version Constants from biomes.h (enum MCVersion)
+
     public static final int MC_1_18 = 22;
     public static final int MC_1_19 = 24;
     public static final int MC_1_20 = 25;

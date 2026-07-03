@@ -128,11 +128,31 @@ public class BiomeColorMap {
     }
 
     public static String getBiomeName(int id) {
-        return ID_TO_NAME.getOrDefault(id, "unknown");
+        String name = ID_TO_NAME.get(id);
+        if (name != null) return name;
+        if (id >= 200) {
+            try {
+                name = org.learn.minecraftmap.jna.CubiomesNative.getCustomBiomeName(id);
+                if (name != null) return name;
+            } catch (Throwable t) {
+                // Fallback se a biblioteca nativa não estiver carregada (ex: em alguns testes unitários mockados)
+            }
+        }
+        return "unknown";
     }
 
     public static Color getColor(int id) {
-        return ID_TO_COLOR.getOrDefault(id, DEFAULT_COLOR);
+        Color color = ID_TO_COLOR.get(id);
+        if (color != null) return color;
+        if (id >= 200) {
+            try {
+                int rgb = org.learn.minecraftmap.jna.CubiomesNative.getCustomBiomeColor(id);
+                return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            } catch (Throwable t) {
+                // Fallback
+            }
+        }
+        return DEFAULT_COLOR;
     }
 
     public static Color getColor(String name) {
